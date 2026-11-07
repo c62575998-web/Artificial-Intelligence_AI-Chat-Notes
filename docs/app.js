@@ -4,7 +4,9 @@ const storageKey = 'ai-chat-notes-pages-demo-v1';
 const $ = name => document.getElementById(name);
 const element = (tag, value, className = '') => {const node = document.createElement(tag); node.textContent = value; node.className = className; return node;};
 const status = (message, error = false) => {$('status').textContent = message; $('status').className = error ? 'error' : '';};
-const timeOf = value => {if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('zh-TW', {hour:'2-digit',minute:'2-digit'}).format(date);};
+const timeOf = value => {if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('zh-TW', {hour:'2-digit',minute:'2-digit',hour12:false}).format(date);};
+const dayOf = value => {const date = value && new Date(value); return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('sv-SE') : 'earlier';};
+const dayLabel = value => {const day = dayOf(value); if (day === 'earlier') return '先前對話'; return day === new Date().toLocaleDateString('sv-SE') ? `今天 ${timeOf(value)}` : new Intl.DateTimeFormat('zh-TW', {month:'long',day:'numeric'}).format(new Date(value));};
 let state;
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -28,15 +30,18 @@ function renderMessages() {
   const host = $('messages'); host.replaceChildren();
   if (!state.messages.length) {
     const intro = element('div', '', 'chat-intro');
-    intro.append(element('strong', '開始一段對話'), element('p', '你的訊息會顯示在右側，系統回覆在左側。要整理筆記時，請描述明確的主題與事實。'));
+    intro.append(element('strong', '今天想聊些什麼？'), element('p', '這是可以操作的聊天展示。若要整理成筆記，請在訊息中寫明主題與事實。'));
     host.append(intro); return;
   }
+  let lastDay = '';
   for (const message of state.messages) {
+    const day = dayOf(message.sentAt);
+    if (day !== lastDay) {host.append(element('div', dayLabel(message.sentAt), 'day-divider')); lastDay = day;}
     const row = element('div', '', `message-row ${message.role}`);
     const content = element('div', '', 'message-content');
     content.append(element('div', message.text, 'message-bubble'));
     if (timeOf(message.sentAt)) content.append(element('time', timeOf(message.sentAt), 'message-time'));
-    row.append(element('div', '記', 'message-avatar'), content);
+    row.append(element('div', '◡', 'message-avatar'), content);
     host.append(row);
   }
   host.scrollTop = host.scrollHeight;
@@ -108,6 +113,11 @@ $('chat-text').addEventListener('input', event => {
   event.target.style.height = 'auto';
   event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`;
 });
+$('example').onclick = () => {
+  $('chat-text').value = '主題：看展；人物：小安；日期：2026-04-10；地點：展館入口';
+  $('chat-text').dispatchEvent(new Event('input'));
+  $('chat-text').focus();
+};
 
 $('organize').onclick = () => {
   try {
