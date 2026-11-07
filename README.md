@@ -2,6 +2,12 @@
 
 依「具來源追溯與修正機制的對話記憶與主題筆記系統」提案製作的可操作原型。單一 Flask 程序提供繁體中文網頁與 API；SQLite 保存原始訊息、記憶版本、筆記句子及來源。搜尋使用 jieba 分詞的 BM25；設定 Embedding API 後也會計算向量相似度，使用 RRF 融合排序。
 
+## GitHub Pages 互動展示
+
+`docs/` 是可直接在瀏覽器開啟的展示版。資料只儲存在當前瀏覽器的 localStorage；它不連接 Python／SQLite 後端，也不呼叫 AI 模型。可以演示聊天記錄、明確欄位整理、筆記來源、修正預覽與確認，以及歷史日期查詢。不要在公開展示中輸入個人或機密資料。
+
+儲存庫的 GitHub Pages 若已設定 **Build and deployment → Source: GitHub Actions**，推送 `main` 後會由 `Deploy GitHub Pages demo` 工作流程部署。預期網址為 `https://c62575998-web.github.io/Artificial-Intelligence_AI-Chat-Notes/`。GitHub Pages 無法執行下方的 Python 後端；完整多人可用網站需要另外部署服務和資料儲存。
+
 ## 啟動
 
 需要 Python 3.12。雲端環境已有 `/workspace/.venvs/ai-chat-notes`，可直接使用：
