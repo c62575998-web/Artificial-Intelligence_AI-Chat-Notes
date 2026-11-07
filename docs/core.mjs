@@ -13,8 +13,9 @@ export function parseFacts(text) {
 
 export function addMessage(state, text) {
   if (!text.trim()) throw new Error('請輸入訊息');
-  state.messages.push({id: id(state), role: 'user', text: text.trim(), organized: false});
-  state.messages.push({id: id(state), role: 'assistant', text: '訊息已保存。按「整理筆記」可擷取明確的主題與事實。'});
+  const sentAt = new Date().toISOString();
+  state.messages.push({id: id(state), role: 'user', text: text.trim(), organized: false, sentAt});
+  state.messages.push({id: id(state), role: 'assistant', text: '訊息已保存。按「整理筆記」可擷取明確的主題與事實。', sentAt});
 }
 
 export function organize(state) {

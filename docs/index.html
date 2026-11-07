@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>對話記憶與主題筆記｜互動展示</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./chat.css">
 </head>
 <body>
   <div class="shell">
@@ -22,13 +23,10 @@
     <main class="main">
       <p id="status" role="status" aria-live="polite"></p>
 
-      <section id="page-chat" class="page chat-page">
-        <header class="page-head"><div class="eyebrow">01 / CHAT</div><h1>從對話開始</h1><p>記下生活片段，之後再整理成可追溯的筆記。</p></header>
-        <div id="messages" class="conversation" aria-label="對話內容"></div>
-        <div class="composer">
-          <form id="chat-form"><label for="chat-text">你的訊息</label><textarea id="chat-text" rows="3" required placeholder="例如：主題：看展；人物：小安；日期：2026-04-10；地點：展館入口"></textarea><div class="form-actions"><button type="submit" class="button-dark">送出訊息 <span aria-hidden="true">↗</span></button></div></form>
-          <div class="composer-bottom"><span>送出訊息後，可將明確的事實整理成筆記。</span><button id="organize" type="button" class="button-link">整理對話 →</button></div>
-        </div>
+      <section id="page-chat" class="page chat-page" aria-label="聊天">
+        <header class="chat-heading"><div class="chat-avatar" aria-hidden="true">記</div><div class="chat-heading-copy"><h1>記憶助手</h1><p>對話會保留在這個瀏覽器</p></div><button id="organize" type="button" class="organize-chip">整理筆記</button></header>
+        <div id="messages" class="conversation" role="log" aria-label="對話內容" aria-live="polite"></div>
+        <div class="composer"><form id="chat-form"><div class="input-row"><label class="sr-only" for="chat-text">傳送訊息</label><textarea id="chat-text" rows="1" required placeholder="傳送訊息…"></textarea><button type="submit" class="send-button" aria-label="送出訊息">↑</button></div></form><p class="chat-hint">Enter 送出 · Shift + Enter 換行　｜　整理筆記範例：主題：看展；日期：2026-04-10</p></div>
       </section>
 
       <section id="page-notes" class="page" hidden>

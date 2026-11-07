@@ -4,6 +4,7 @@ const storageKey = 'ai-chat-notes-pages-demo-v1';
 const $ = name => document.getElementById(name);
 const element = (tag, value, className = '') => {const node = document.createElement(tag); node.textContent = value; node.className = className; return node;};
 const status = (message, error = false) => {$('status').textContent = message; $('status').className = error ? 'error' : '';};
+const timeOf = value => {if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('zh-TW', {hour:'2-digit',minute:'2-digit'}).format(date);};
 let state;
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -25,11 +26,18 @@ function showPage() {
 
 function renderMessages() {
   const host = $('messages'); host.replaceChildren();
-  if (!state.messages.length) {host.append(element('p', '對話會出現在這裡。先輸入一段生活事件吧。', 'empty')); return;}
+  if (!state.messages.length) {
+    const intro = element('div', '', 'chat-intro');
+    intro.append(element('strong', '開始一段對話'), element('p', '你的訊息會顯示在右側，系統回覆在左側。要整理筆記時，請描述明確的主題與事實。'));
+    host.append(intro); return;
+  }
   for (const message of state.messages) {
-    const bubble = element('div', '', `message ${message.role}`);
-    bubble.append(element('span', message.role === 'user' ? '你' : '系統', 'speaker'), element('span', message.text));
-    host.append(bubble);
+    const row = element('div', '', `message-row ${message.role}`);
+    const content = element('div', '', 'message-content');
+    content.append(element('div', message.text, 'message-bubble'));
+    if (timeOf(message.sentAt)) content.append(element('time', timeOf(message.sentAt), 'message-time'));
+    row.append(element('div', '記', 'message-avatar'), content);
+    host.append(row);
   }
   host.scrollTop = host.scrollHeight;
 }
@@ -89,9 +97,17 @@ function selectClaim(claimId, navigate = false) {
 
 $('chat-form').onsubmit = event => {
   event.preventDefault();
-  try {addMessage(state, $('chat-text').value); save(); $('chat-text').value = ''; render(); status('訊息已保存於此瀏覽器。');}
+  try {addMessage(state, $('chat-text').value); save(); $('chat-text').value = ''; $('chat-text').style.height = ''; render(); status('');}
   catch (error) {status(error.message, true);}
 };
+
+$('chat-text').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {event.preventDefault(); $('chat-form').requestSubmit();}
+});
+$('chat-text').addEventListener('input', event => {
+  event.target.style.height = 'auto';
+  event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`;
+});
 
 $('organize').onclick = () => {
   try {

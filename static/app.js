@@ -1,8 +1,10 @@
 const $ = name => document.getElementById(name);
 const element = (tag, value, className = '') => {const node = document.createElement(tag); node.textContent = value; node.className = className; return node;};
 const status = (message, error = false) => {$('status').textContent = message; $('status').className = error ? 'error' : '';};
+const timeOf = value => {if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('zh-TW', {hour:'2-digit',minute:'2-digit'}).format(date);};
 let conversationId = Number(localStorage.getItem('chat-notes-conversation') || 0);
 let notes = [], selected = null, currentPreview = null, requestId = null;
+let sending = false;
 
 async function api(path, options = {}) {
   const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
@@ -34,11 +36,18 @@ async function ensureConversation() {
 async function loadMessages() {
   const messages = await api(`/api/conversations/${conversationId}/messages`);
   const host = $('messages'); host.replaceChildren();
-  if (!messages.length) {host.append(element('p', '對話會出現在這裡。先輸入一段生活事件吧。', 'empty')); return;}
+  if (!messages.length) {
+    const intro = element('div', '', 'chat-intro');
+    intro.append(element('strong', '開始一段對話'), element('p', '你的訊息會顯示在右側，系統回覆在左側。要整理筆記時，請描述明確的主題與事實。'));
+    host.append(intro); return;
+  }
   for (const message of messages) {
-    const bubble = element('div', '', `message ${message.role}`);
-    bubble.append(element('span', message.role === 'user' ? '你' : '系統', 'speaker'), element('span', message.text));
-    host.append(bubble);
+    const row = element('div', '', `message-row ${message.role}`);
+    const content = element('div', '', 'message-content');
+    content.append(element('div', message.text, 'message-bubble'));
+    if (timeOf(message.sent_at)) content.append(element('time', timeOf(message.sent_at), 'message-time'));
+    row.append(element('div', '記', 'message-avatar'), content);
+    host.append(row);
   }
   host.scrollTop = host.scrollHeight;
 }
@@ -98,14 +107,24 @@ async function selectClaim(claimId, navigate = false) {
 
 $('chat-form').onsubmit = async event => {
   event.preventDefault();
+  if (sending) return;
+  sending = true; document.querySelector('#chat-form button').disabled = true;
   try {
     await api(`/api/conversations/${conversationId}/messages`, {method:'POST', body:JSON.stringify({text:$('chat-text').value})});
-    $('chat-text').value = ''; await loadMessages(); status('訊息已保存。');
+    $('chat-text').value = ''; $('chat-text').style.height = ''; await loadMessages(); status('');
   } catch (error) {
-    if (error.saved) {$('chat-text').value = ''; await loadMessages();}
+    if (error.saved) {$('chat-text').value = ''; $('chat-text').style.height = ''; await loadMessages();}
     status(error.message, true);
-  }
+  } finally {sending = false; document.querySelector('#chat-form button').disabled = false; $('chat-text').focus();}
 };
+
+$('chat-text').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {event.preventDefault(); $('chat-form').requestSubmit();}
+});
+$('chat-text').addEventListener('input', event => {
+  event.target.style.height = 'auto';
+  event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`;
+});
 
 $('organize').onclick = async () => {
   try {
