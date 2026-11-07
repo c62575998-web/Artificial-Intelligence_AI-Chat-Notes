@@ -4,7 +4,7 @@
 
 ## GitHub Pages 互動展示
 
-`docs/` 是可直接在瀏覽器開啟的展示版。資料只儲存在當前瀏覽器的 localStorage；它不連接 Python／SQLite 後端，也不呼叫 AI 模型。可以演示聊天記錄、明確欄位整理、筆記來源、修正預覽與確認，以及歷史日期查詢。不要在公開展示中輸入個人或機密資料。
+`docs/` 是可直接在瀏覽器開啟的展示版。主頁是聊天，主題筆記、來源與修正、查詢記憶位於左側選單的獨立頁面。資料只儲存在當前瀏覽器的 localStorage；它不連接 Python／SQLite 後端，也不呼叫 AI 模型。可以演示聊天記錄、明確欄位整理、筆記來源、修正預覽與確認，以及歷史日期查詢。不要在公開展示中輸入個人或機密資料。
 
 首次啟用 GitHub Pages：在儲存庫的 **Settings → Pages → Build and deployment**，選擇 **Deploy from a branch**、分支 **main**、資料夾 **/docs**，然後按 **Save**。部署完成後，網址為 `https://c62575998-web.github.io/Artificial-Intelligence_AI-Chat-Notes/`。之後推送 `main` 的 `docs/` 內容會自動更新頁面。GitHub Pages 無法執行下方的 Python 後端；完整多人可用網站需要另外部署服務和資料儲存。
 

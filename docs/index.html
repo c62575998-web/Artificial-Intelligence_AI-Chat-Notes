@@ -1,23 +1,56 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>對話記憶與主題筆記｜互動展示</title>
-  <style>
-    :root{font-family:system-ui,sans-serif;color:#173344;background:#f3f7f8}body{max-width:1100px;margin:auto;padding:2rem}h1{margin-bottom:.2rem}h2{margin-top:0}.hint{color:#526b77;line-height:1.6}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}section{background:white;border:1px solid #d3e0e3;border-radius:12px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 4px 15px #1733440c}input,textarea,select{font:inherit;box-sizing:border-box;width:100%;padding:.6rem;border:1px solid #a9c2c9;border-radius:7px;margin:.3rem 0 .8rem}button{font:inherit;border:0;border-radius:7px;padding:.6rem .9rem;background:#126a7f;color:white;cursor:pointer;margin:.2rem}.secondary{background:#607780}.claim{display:block;text-align:left;width:100%;background:#e4f3ee;color:#173d36}.message,.source{background:#eef4f7;padding:.7rem;border-radius:7px;margin:.4rem 0}.source{border-left:3px solid #5b9b9f}.preview{background:#f8f2dc;padding:1rem;border-radius:9px}.error{color:#ad253b}@media(max-width:750px){.grid{grid-template-columns:1fr}body{padding:1rem}}
-  </style>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <h1>對話記憶與主題筆記</h1>
-  <p class="hint">這是 GitHub Pages 互動展示版。資料只保存在你目前的瀏覽器；沒有連接 Python 後端或 AI 模型。試著輸入「主題：看展；人物：小安；日期：2026-04-10；地點：展館入口」，再按「整理筆記」。</p>
-  <p id="status" role="status"></p>
-  <div class="grid"><div>
-    <section><h2>聊天</h2><div id="messages"></div><form id="chat-form"><textarea id="chat-text" rows="3" required placeholder="主題：看展；日期：2026-04-10"></textarea><button>送出訊息</button></form><button id="organize" class="secondary">整理筆記</button><button id="reset" class="secondary">清除本機展示資料</button></section>
-    <section><h2>查詢記憶</h2><form id="search-form"><input id="search-text" required placeholder="看展"><label>查詢當時日期（選填）<input id="as-of" type="date"></label><button>搜尋</button></form><div id="results"></div></section>
-  </div><div>
-    <section><h2>主題筆記</h2><div id="notes"></div></section>
-    <section><h2>來源與修正</h2><div id="selected">請點選一個筆記句子。</div><div id="sources"></div><form id="revision-form" hidden><label>新內容<input id="new-value" required></label><label>修正類型<select id="kind"><option value="correction">原本記錯</option><option value="change">後來改變</option></select></label><label>生效日期（後來改變必填）<input id="effective-from" type="date"></label><label>修正說明<input id="reason" required></label><button>預覽修正</button></form><div id="preview"></div></section>
-  </div></div>
-  <p class="hint">完整 Python／SQLite 原型與測試請見 <a href="https://github.com/c62575998-web/Artificial-Intelligence_AI-Chat-Notes">GitHub 儲存庫</a>。此展示版不適合存放個人或機密資訊。</p>
+  <div class="shell">
+    <aside class="sidebar" aria-label="主選單">
+      <a class="brand" href="#chat"><span class="brand-mark">◎</span><span>對話記憶<span class="brand-sub">主題筆記系統</span></span></a>
+      <div class="nav-label">工作區</div>
+      <nav>
+        <a href="#chat" data-page="chat"><span>01</span> 聊天</a>
+        <a href="#notes" data-page="notes"><span>02</span> 主題筆記</a>
+        <a href="#sources" data-page="sources"><span>03</span> 來源與修正</a>
+        <a href="#search" data-page="search"><span>04</span> 查詢記憶</a>
+      </nav>
+      <div class="sidebar-foot">互動展示版<br>資料保存在此瀏覽器</div>
+    </aside>
+    <main class="main">
+      <p id="status" role="status" aria-live="polite"></p>
+
+      <section id="page-chat" class="page chat-page">
+        <header class="page-head"><div class="eyebrow">01 / CHAT</div><h1>從對話開始</h1><p>記下生活片段，之後再整理成可追溯的筆記。</p></header>
+        <div id="messages" class="conversation" aria-label="對話內容"></div>
+        <div class="composer">
+          <form id="chat-form"><label for="chat-text">你的訊息</label><textarea id="chat-text" rows="3" required placeholder="例如：主題：看展；人物：小安；日期：2026-04-10；地點：展館入口"></textarea><div class="form-actions"><button type="submit" class="button-dark">送出訊息 <span aria-hidden="true">↗</span></button></div></form>
+          <div class="composer-bottom"><span>送出訊息後，可將明確的事實整理成筆記。</span><button id="organize" type="button" class="button-link">整理對話 →</button></div>
+        </div>
+      </section>
+
+      <section id="page-notes" class="page" hidden>
+        <header class="page-head"><div class="eyebrow">02 / NOTES</div><h1>主題筆記</h1><p>依主題查看整理後的內容。點選句子可追查來源及提出修正。</p></header>
+        <div id="notes" class="stack"></div>
+      </section>
+
+      <section id="page-sources" class="page" hidden>
+        <header class="page-head"><div class="eyebrow">03 / SOURCES</div><h1>來源與修正</h1><p>先選一個筆記句子，再查看原話、預覽修改範圍。</p></header>
+        <div class="detail-grid"><div><div class="section-title">選擇句子</div><div id="claim-list" class="claim-list"></div></div><div><div class="section-title">句子詳情</div><div id="selected" class="selected">請先選擇一個筆記句子。</div><div id="sources"></div>
+          <form id="revision-form" hidden><label for="new-value">新的內容</label><input id="new-value" required><label for="kind">修正類型</label><select id="kind"><option value="correction">原本記錯</option><option value="change">後來改變</option></select><label for="effective-from">生效日期（後來改變必填）</label><input id="effective-from" type="date"><label for="reason">修正說明</label><input id="reason" required><button class="button-dark" type="submit">預覽修正 →</button></form><div id="preview"></div>
+        </div></div>
+      </section>
+
+      <section id="page-search" class="page" hidden>
+        <header class="page-head"><div class="eyebrow">04 / SEARCH</div><h1>查詢記憶</h1><p>搜尋目前記憶，或指定日期回看當時有效的內容。</p></header>
+        <form id="search-form" class="search-form"><label for="search-text">關鍵字</label><input id="search-text" required placeholder="例如：看展"><label for="as-of">查詢當時日期（選填）</label><input id="as-of" type="date"><button class="button-dark" type="submit">搜尋 →</button></form><div id="results" class="stack"></div>
+      </section>
+
+      <footer class="page-foot"><span>GitHub Pages 展示版 · 不連接 Python 後端或 AI 模型</span><button id="reset" type="button" class="button-link">清除本機展示資料</button></footer>
+    </main>
+  </div>
   <script type="module" src="./app.js"></script>
-</body></html>
+</body>
+</html>
