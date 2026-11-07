@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>對話記憶與主題筆記</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#193044;background:#f4f7f7}body{margin:0 auto;max-width:1100px;padding:2rem}
+    h1{margin-bottom:.3rem}p{line-height:1.55}.hint{color:#536b78}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+    section{background:white;border:1px solid #d5e1e3;border-radius:12px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 3px 10px #102e3d0b}
+    input,textarea,select,button{font:inherit}input,textarea,select{box-sizing:border-box;width:100%;padding:.65rem;border:1px solid #a9c1c9;border-radius:7px;margin:.3rem 0 .7rem}
+    button{border:0;border-radius:7px;padding:.6rem 1rem;background:#12677d;color:white;cursor:pointer;margin:.2rem .2rem .2rem 0}
+    button.secondary{background:#5d737b}button:disabled{opacity:.5;cursor:default}.message{padding:.7rem;margin:.5rem 0;border-radius:8px;background:#edf5f5}.assistant{background:#e6eff9}
+    .claim{display:block;text-align:left;background:#eaf4f0;color:#183a36;width:100%;margin:.4rem 0}.claim:hover{background:#d3eae1}
+    .source{padding:.6rem;border-left:3px solid #68a4ac;margin:.6rem 0}.preview{background:#f7f3df;padding:1rem;border-radius:8px}.error{color:#a12d31}
+    @media(max-width:750px){.grid{grid-template-columns:1fr}body{padding:1rem}}
+  </style>
+</head>
+<body>
+<h1>對話記憶與主題筆記</h1>
+<p class="hint">先用明確欄位記錄生活事件，例如「主題：看展；人物：小安；日期：2026-04-10；地點：展館入口」。送出後按「整理筆記」。點選筆記句子可查看原話並提出修正。</p>
+<p id="status" role="status"></p>
+<div class="grid">
+  <div>
+    <section><h2>聊天</h2><div id="messages"></div><form id="chat-form"><textarea id="chat-text" rows="3" required placeholder="主題：看展；日期：2026-04-10"></textarea><button>送出訊息</button></form><button id="organize" class="secondary">整理筆記</button></section>
+    <section><h2>查詢記憶</h2><form id="search-form"><input id="search-text" required placeholder="看展日期"><button>搜尋</button></form><div id="results"></div></section>
+  </div>
+  <div>
+    <section><h2>主題筆記</h2><div id="notes"></div></section>
+    <section><h2>來源與修正</h2><div id="selected">請點選一個筆記句子。</div><div id="sources"></div>
+      <form id="revision-form" hidden><label>新的事實<input id="new-value" required></label><label>修正類型<select id="kind"><option value="correction">原本記錯</option><option value="change">後來改變</option></select></label><label>生效日期（後來改變必填）<input id="effective-from" type="date"></label><label>修正說明<input id="reason" required></label><button>預覽修正</button></form>
+      <div id="preview"></div>
+    </section>
+  </div>
+</div>
+<script>
+let conversationId=Number(localStorage.getItem('chat-notes-conversation')||0),selectedClaim=null,currentPreview=null;
+const $=id=>document.getElementById(id);
+const status=(message,error=false)=>{ $('status').textContent=message; $('status').className=error?'error':''; };
+async function api(path,options={}){const response=await fetch(path,{headers:{'Content-Type':'application/json'},...options});const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error||`HTTP ${response.status}`),{saved:value.saved});return value;}
+function element(tag,text,cls){const node=document.createElement(tag);node.textContent=text;if(cls)node.className=cls;return node;}
+async function ensureConversation(){if(!conversationId){const data=await api('/api/conversations',{method:'POST'});conversationId=data.id;localStorage.setItem('chat-notes-conversation',conversationId);}}
+async function loadMessages(){const items=await api(`/api/conversations/${conversationId}/messages`);$('messages').replaceChildren(...items.map(x=>element('div',`${x.role==='user'?'你':'系統'}：${x.text}`,'message '+(x.role==='assistant'?'assistant':''))));}
+async function loadNotes(){const notes=await api('/api/notes');const host=$('notes');host.replaceChildren();for(const note of notes){const block=element('div','');block.append(element('h3',note.title));for(const claim of note.claims){const button=element('button',claim.sentence,'claim');button.onclick=()=>selectClaim(claim);block.append(button);}host.append(block);}if(!notes.length)host.append(element('p','尚無筆記。'));}
+async function selectClaim(claim){selectedClaim=claim;currentPreview=null;$('preview').replaceChildren();$('selected').textContent=`選取句子：${claim.sentence}`;$('revision-form').hidden=false;const sources=await api(`/api/claims/${claim.id}/sources`);$('sources').replaceChildren(...sources.map(x=>element('div',`來源訊息 #${x.message_id}：${x.text}`,'source')));}
+$('chat-form').onsubmit=async event=>{event.preventDefault();try{await api(`/api/conversations/${conversationId}/messages`,{method:'POST',body:JSON.stringify({text:$('chat-text').value})});$('chat-text').value='';await loadMessages();status('訊息已保存。');}catch(e){if(e.saved){$('chat-text').value='';await loadMessages();}status(e.message,true)}};
+$('organize').onclick=async()=>{try{const result=await api(`/api/conversations/${conversationId}/organize`,{method:'POST'});await loadNotes();status(`整理完成，新增 ${result.created.length} 項記憶。${result.skipped?.length?`有 ${result.skipped.length} 項與現有內容衝突，請從筆記提出修正。`:''}`);}catch(e){status(e.message,true)}};
+$('search-form').onsubmit=async event=>{event.preventDefault();try{const items=await api('/api/search?q='+encodeURIComponent($('search-text').value));$('results').replaceChildren(...items.map(x=>element('div',`${x.topic}｜${x.relation}：${x.value}（版本 ${x.version}）`,'source')));if(!items.length)$('results').textContent='沒有找到相關記憶。';}catch(e){status(e.message,true)}};
+$('revision-form').onsubmit=async event=>{event.preventDefault();try{const result=await api('/api/revisions/preview',{method:'POST',body:JSON.stringify({claim_id:selectedClaim.id,new_value:$('new-value').value,kind:$('kind').value,effective_from:$('effective-from').value,reason:$('reason').value})});currentPreview=result.preview_id;const host=$('preview');host.replaceChildren();host.append(element('h3','修正預覽'),element('p',`原值：${result.before.value} → 新值：${result.after.value}`));for(const item of result.affected)host.append(element('div',`${item.title}：${item.sentence} → ${item.after}`,'source'));const confirm=element('button','確認提交');confirm.onclick=confirmRevision;const cancel=element('button','取消','secondary');cancel.onclick=cancelRevision;host.append(confirm,cancel);status(`將更新 ${result.affected.length} 個筆記句子。`);}catch(e){status(e.message,true)}};
+async function confirmRevision(){try{const result=await api('/api/revisions/confirm',{method:'POST',body:JSON.stringify({preview_id:currentPreview,request_id:crypto.randomUUID()})});currentPreview=null;$('preview').replaceChildren();await loadNotes();await selectClaim(selectedClaim);status(`修正完成，更新 ${result.updated_claims} 個句子。`);}catch(e){status(e.message,true)}}
+async function cancelRevision(){try{await api('/api/revisions/preview/'+currentPreview,{method:'DELETE'});currentPreview=null;$('preview').replaceChildren();status('已取消修正。');}catch(e){status(e.message,true)}}
+ensureConversation().then(async()=>{try{await loadMessages();}catch(e){conversationId=0;await ensureConversation();await loadMessages();}await loadNotes();}).catch(e=>status(e.message,true));
+</script>
+</body></html>
